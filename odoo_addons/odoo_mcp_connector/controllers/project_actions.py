@@ -58,6 +58,7 @@ def list_tasks(user, params: dict[str, Any]) -> list[dict[str, Any]]:
     return compact_records(records)
 
 
+
 def list_task_stages(user, params: dict[str, Any]) -> list[dict[str, Any]]:
     """List project task stages visible to the mapped Odoo user."""
     domain: list[Any] = []
@@ -186,9 +187,11 @@ def get_task(user, params: dict[str, Any]) -> dict[str, Any]:
             assignees = Users.read(["id", "name"])
             record["user_ids"] = [{"id": a["id"], "name": a["name"]} for a in assignees]
 
-    # Enrich tags with names
+    # Enrich tags with names; with_user(user) keeps ACLs consistent with all
+    # other enrichments in this function — tags are non-sensitive but there is
+    # no reason to bypass the caller's access context.
     if record.get("tag_ids"):
-        tags = request.env["project.tags"].sudo().browse(record["tag_ids"]).read(["id", "name"])
+        tags = request.env["project.tags"].with_user(user).browse(record["tag_ids"]).read(["id", "name"])
         record["tag_ids"] = [{"id": t["id"], "name": t["name"]} for t in tags]
 
     # Chatter comments — public only (exclude internal notes via subtype_id.internal).
